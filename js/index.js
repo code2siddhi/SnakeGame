@@ -1,155 +1,151 @@
-
-//game variables and constants
 let inputDir = { x: 0, y: 0 };
-const foodSound = new Audio("items/food.mp3");
-const gameOverSound = new Audio("items/gameOver.mp3");
-const moveSound = new Audio('items/move.mp3');
-const musicSound = new Audio("items/gameBg.mp3");
-let speed = 9;
+let snakeArr = [{ x: 13, y: 15 }];
+let food = { x: 6, y: 7 };
+let speed = 5;
 let score = 0;
 let lastPaintTime = 0;
-let snakeArr = [
-    { x: 13, y: 15 }
-];
-food = { x: 6, y: 7 };
+let gameRunning = false;
+let hiscoreval = 0;
 
-//GAME FUNCTIONS
+const board = document.getElementById("board");
+const scoreBox = document.getElementById("scoreBox");
+const hiscoreBox = document.getElementById("hiscoreBox");
+const startBtn = document.getElementById("startBtn");
+const pauseBtn = document.getElementById("pauseBtn");
+const resumeBtn = document.getElementById("resumeBtn");
+const restartBtn = document.getElementById("restartBtn");
+const gameOverOverlay = document.getElementById("gameOverOverlay");
+const mobileControls = document.querySelectorAll(".control-btn");
+
+const foodSound = new Audio("items/food.mp3");
+const gameOverSound = new Audio("items/gameOver.mp3");
+const moveSound = new Audio("items/move.mp3");
+const musicSound = new Audio("items/gameBg.mp3");
+
 function main(ctime) {
-    window.requestAnimationFrame(main);
-    if ((ctime - lastPaintTime) / 1000 < (1 / speed)) {
-        return;
-    }
-    lastPaintTime = ctime;
-    gameEngine();
+  if (!gameRunning) return;
+  window.requestAnimationFrame(main);
+  if ((ctime - lastPaintTime) / 1000 < 1 / speed) return;
+  lastPaintTime = ctime;
+  gameEngine();
 }
 
 function isCollide(snake) {
-    //AGAR KHUD SE TAKKAR MAR DE TO
-    for (let i = 1; i < snakeArr.length; i++) {
-        if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) {
-            return true;
-        }
-    }
-
-    //AGAR DIWAL ME GHUS GYE TO
-    if (snake[0].x >= 18 || snake[0].x <= 0 || snake[0].y >= 18 || snake[0].y <= 0) {
-        return true;
-    }
-
-    return false;
-
+  for (let i = 1; i < snake.length; i++) {
+    if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) return true;
+  }
+  return snake[0].x >= 18 || snake[0].x <= 0 || snake[0].y >= 18 || snake[0].y <= 0;
 }
 
 function gameEngine() {
+  if (isCollide(snakeArr)) {
+    gameOverSound.play();
+    musicSound.pause();
+    inputDir = { x: 0, y: 0 };
+    gameRunning = false;
+    gameOverOverlay.style.display = "flex";
+    return;
+  }
 
-    //UPDATING SNAKE ARR AND VARIABLES
-
-    if (isCollide(snakeArr)) {
-        gameOverSound.play();
-        moveSound.pause();
-        inputDir = { x: 0, y: 0 };
-        alert("Game over , press any key to play again");
-        snakeArr = [{ x: 13, y: 15 }]
-        musicSound.play();
-        score = 0;
+  if (snakeArr[0].x === food.x && snakeArr[0].y === food.y) {
+    foodSound.play();
+    score++;
+    if (score > hiscoreval) {
+      hiscoreval = score;
+      localStorage.setItem("hiscore", JSON.stringify(hiscoreval));
+      hiscoreBox.innerHTML = "Hi-score: " + hiscoreval;
     }
+    scoreBox.innerHTML = "Score: " + score;
+    snakeArr.unshift({ x: snakeArr[0].x + inputDir.x, y: snakeArr[0].y + inputDir.y });
+    food = {
+      x: Math.round(2 + 14 * Math.random()),
+      y: Math.round(2 + 14 * Math.random())
+    };
+  }
 
-    //IF YOU HAVE EATEN THE FOOD , INCREMENT THE SCORE AND REGENRATE THE FOOD
-    if (snakeArr[0].y == food.y && snakeArr[0].x == food.x) {
-        foodSound.play();
-        score += 1;
-        if (score > hiscoreval) {
-            hiscoreval = score;
-            localStorage.setItem("hiscore", JSON.stringify(hiscoreval));
-            hiscoreBox.innerHTML = "HiScore: " + hiscoreval;
-        }
-        scoreBox.innerHTML = "Current score : " + score;
-        snakeArr.unshift({ x: snakeArr[0].x + inputDir.x, y: snakeArr[0].y + inputDir.y });
-        let a = 2;
-        let b = 16;
-        food = { x: Math.round(a + (b - a) * Math.random()), y: Math.round(a + (b - a) * Math.random()) }
-    }
+  for (let i = snakeArr.length - 2; i >= 0; i--) {
+    snakeArr[i + 1] = { ...snakeArr[i] };
+  }
+  snakeArr[0].x += inputDir.x;
+  snakeArr[0].y += inputDir.y;
 
-    //MOVING THE SNAKE
-    for (let i = snakeArr.length - 2; i >= 0; i--) {
-        snakeArr[i + 1] = { ...snakeArr[i] };
-    }
+  board.innerHTML = "";
+  snakeArr.forEach((e, i) => {
+    let div = document.createElement("div");
+    div.style.gridRowStart = e.y;
+    div.style.gridColumnStart = e.x;
+    div.classList.add(i === 0 ? "head" : "snake");
+    board.appendChild(div);
+  });
 
-    snakeArr[0].x += inputDir.x;
-    snakeArr[0].y += inputDir.y;
-
-
-    //DISPLAY THE SNAKE
-    board.innerHTML = "";
-    snakeArr.forEach((e, index) => {
-        snakeElement = document.createElement('div');
-        snakeElement.style.gridRowStart = e.y;
-        snakeElement.style.gridColumnStart = e.x;
-        if (index === 0) {
-            snakeElement.classList.add('head');
-        }
-        else {
-            snakeElement.classList.add('snake');
-
-        }
-        board.appendChild(snakeElement);
-    });
-
-    //DISPLAY THE FOOD
-    foodElement = document.createElement('div');
-    foodElement.style.gridRowStart = food.y;
-    foodElement.style.gridColumnStart = food.x;
-    foodElement.classList.add('food');
-    board.appendChild(foodElement);
-
+  const foodEl = document.createElement("div");
+  foodEl.style.gridRowStart = food.y;
+  foodEl.style.gridColumnStart = food.x;
+  foodEl.classList.add("food");
+  board.appendChild(foodEl);
 }
 
-
-//MAIN LOGIC
-
-musicSound.play();
-let hiscore = localStorage.getItem('hiscore');
-
-if (hiscore == null) {
-    hiscoreval = 0;
-    localStorage.setItem('hiscore', JSON.stringify(hiscoreval));
+let hiscore = localStorage.getItem("hiscore");
+if (hiscore === null) {
+  hiscoreval = 0;
+  localStorage.setItem("hiscore", JSON.stringify(hiscoreval));
+} else {
+  hiscoreval = JSON.parse(hiscore);
+  hiscoreBox.innerHTML = "Hi-score: " + hiscoreval;
 }
-else {
-    hiscoreval = JSON.parse(hiscore);
-    hiscoreBox.innerHTML = "HiScore: " + hiscore;
-}
-window.requestAnimationFrame(main);
-window.addEventListener('keydown', e => {
-    inputDir = { x: 0, y: 1 } //start the game
-    moveSound.play();
 
-    switch (e.key) {
-        case "ArrowUp":
-            console.log("ArrowUp");
-            inputDir.x = 0;
-            inputDir.y = -1;
-            break;
-
-        case "ArrowDown":
-            console.log("ArrowDown");
-            inputDir.x = 0;
-            inputDir.y = 1;
-            break;
-
-        case "ArrowLeft":
-            console.log("ArrowLeft");
-            inputDir.x = -1;
-            inputDir.y = 0;
-            break;
-
-        case "ArrowRight":
-            console.log("ArrowRight");
-            inputDir.x = 1;
-            inputDir.y = 0;
-            break;
-        default:
-            break;
-    }
+window.addEventListener("keydown", e => {
+  moveSound.play();
+  switch (e.key) {
+    case "ArrowUp": inputDir = { x: 0, y: -1 }; break;
+    case "ArrowDown": inputDir = { x: 0, y: 1 }; break;
+    case "ArrowLeft": inputDir = { x: -1, y: 0 }; break;
+    case "ArrowRight": inputDir = { x: 1, y: 0 }; break;
+  }
 });
 
+mobileControls.forEach(btn => {
+  btn.addEventListener("click", () => {
+    const dir = btn.dataset.dir;
+    moveSound.play();
+    if (dir === "up") inputDir = { x: 0, y: -1 };
+    else if (dir === "down") inputDir = { x: 0, y: 1 };
+    else if (dir === "left") inputDir = { x: -1, y: 0 };
+    else if (dir === "right") inputDir = { x: 1, y: 0 };
+  });
+});
 
+startBtn.addEventListener("click", () => {
+  gameRunning = true;
+  gameOverOverlay.style.display = "none";
+  inputDir = { x: 0, y: -1 };
+  musicSound.play();
+  window.requestAnimationFrame(main);
+});
+
+pauseBtn.addEventListener("click", () => {
+  gameRunning = false;
+  musicSound.pause();
+});
+
+resumeBtn.addEventListener("click", () => {
+  if (!gameRunning) {
+    gameRunning = true;
+    musicSound.play();
+    window.requestAnimationFrame(main);
+  }
+});
+
+restartBtn.addEventListener("click", () => {
+  snakeArr = [{ x: 13, y: 15 }];
+  food = { x: 6, y: 7 };
+  inputDir = { x: 0, y: 0 };
+  score = 0;
+  scoreBox.innerHTML = "Score: " + score;
+  gameOverOverlay.style.display = "none";
+  gameRunning = true;
+  musicSound.play();
+  window.requestAnimationFrame(main);
+});
+
+gameEngine();
